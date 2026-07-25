@@ -1,15 +1,15 @@
 import React from 'react';
 
-function PostCard({ post, author, onStartChat }) {
+function PostCard({ post, onStartChat }) {
   return (
     <article className="post-card">
       <div className="post-header">
         <div>
           <span className="post-category">{post.category}</span>
           <h3>{post.title}</h3>
-          <p className="post-meta">Publicado por {author.name} · {post.created}</p>
+          <p className="post-meta">Publicado por {post.authorName || 'Anónimo'} · {post.created}</p>
         </div>
-        <button className="btn btn-sm" onClick={() => onStartChat(post.userId, author.name)}>
+        <button className="btn btn-sm" onClick={() => onStartChat(post.userId, post.authorName || 'Anónimo')}>
           Iniciar chat
         </button>
       </div>

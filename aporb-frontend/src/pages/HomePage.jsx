@@ -1,7 +1,7 @@
 import React from 'react';
 import PostCard from '../components/PostCard.jsx';
 
-function HomePage({ posts, users, searchQuery, filterCategory, categories, onSearchChange, onFilterChange, onOpenPublish, onStartChat }) {
+function HomePage({ posts, searchQuery, filterCategory, categories, onSearchChange, onFilterChange, onOpenPublish, onStartChat }) {
   return (
     <>
       <div className="section-header home-header">
@@ -37,10 +37,7 @@ function HomePage({ posts, users, searchQuery, filterCategory, categories, onSea
             <p>Prueba otra palabra clave o categoría.</p>
           </div>
         ) : (
-          posts.map((post) => {
-            const author = users.find((user) => user.id === post.userId) || { name: post.authorName || 'Anónimo' };
-            return <PostCard key={post.id} post={post} author={author} onStartChat={onStartChat} />;
-          })
+          posts.map((post) => <PostCard key={post.id} post={post} onStartChat={onStartChat} />)
         )}
       </div>
     </>

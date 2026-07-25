@@ -12,10 +12,10 @@ import HomePage from './pages/HomePage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import PublishPage from './pages/PublishPage.jsx';
 import ChatsPage from './pages/ChatsPage.jsx';
-import { categories } from './services/storage.js';
 import {
   clearAuthToken,
   createPost,
+  getCategories,
   getCurrentUser,
   getPosts,
   getMyPosts,
@@ -34,6 +34,7 @@ function App() {
   const [page, setPage] = useState('landing');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const [publishData, setPublishData] = useState({ title: '', category: 'libros', condition: 'bueno', location: '', description: '', details: '', media: [] });
   const [profileData, setProfileData] = useState({ name: '', password: '', description: '', interests: '', avatar: '' });
   const [authMode, setAuthMode] = useState('login');
@@ -65,8 +66,9 @@ function App() {
           }
         }
 
-        const postsResponse = await getPosts();
+        const [postsResponse, categoriesResponse] = await Promise.all([getPosts(), getCategories()]);
         setPosts(postsResponse.posts || []);
+        setCategories(categoriesResponse || []);
 
         const myPostsResponse = await getMyPosts().catch(() => ({ posts: [] }));
         if (myPostsResponse.posts?.length) {
@@ -425,10 +427,9 @@ function App() {
             {page === 'home' && (
               <HomePage
                 posts={filteredPosts}
-                users={users}
                 searchQuery={searchQuery}
                 filterCategory={filterCategory}
-                categories={categories}
+                categories={['all', ...categories.map((category) => category.name)]}
                 onSearchChange={setSearchQuery}
                 onFilterChange={setFilterCategory}
                 onOpenPublish={() => setPage('publish')}
@@ -452,7 +453,7 @@ function App() {
             {page === 'publish' && (
               <PublishPage
                 publishData={publishData}
-                categories={categories}
+                categories={categories.map((category) => category.name)}
                 onChange={handlePublishChange}
                 onMediaChange={handleMediaUpload}
                 onPublish={handlePublish}

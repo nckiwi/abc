@@ -88,6 +88,8 @@ function normalizePost(post) {
   return {
     id: post.id,
     userId: post.user_id ?? post.userId,
+    username: post.username || '',
+    avatarUrl: post.avatar_url || post.avatar || '',
     title: post.title || '',
     category: post.category_name || post.category || 'Otros',
     description: post.description || '',
@@ -97,6 +99,7 @@ function normalizePost(post) {
     created: post.created_at ? new Date(post.created_at).toLocaleString() : post.created || '',
     createdAt: post.created_at || post.createdAt || '',
     authorName: post.username || [post.first_name, post.last_name].filter(Boolean).join(' ').trim() || 'Anónimo',
+    authorAvatar: post.avatar_url || post.avatar || '',
     media: (post.media || []).map((item, index) => ({
       id: item.id ?? index,
       name: item.file_name || item.fileName || item.name || 'media',
@@ -180,6 +183,11 @@ export async function getMyPosts() {
     ...response,
     posts: (response.posts || []).map(normalizePost).filter(Boolean),
   };
+}
+
+export async function getCategories() {
+  const response = await request('/categories');
+  return response.categories || [];
 }
 
 export { normalizeUser, normalizePost };
