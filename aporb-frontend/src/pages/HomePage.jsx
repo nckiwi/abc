@@ -38,7 +38,7 @@ function HomePage({ posts, users, searchQuery, filterCategory, categories, onSea
           </div>
         ) : (
           posts.map((post) => {
-            const author = users.find((user) => user.id === post.userId) || { name: 'Anónimo' };
+            const author = users.find((user) => user.id === post.userId) || { name: post.authorName || 'Anónimo' };
             return <PostCard key={post.id} post={post} author={author} onStartChat={onStartChat} />;
           })
         )}

@@ -17,7 +17,7 @@ function PostCard({ post, author, onStartChat }) {
       {post.media?.length > 0 && (
         <div className="post-media-grid">
           {post.media.map((item, index) =>
-            item.type.startsWith('video/') ? (
+            item.type?.includes('video') ? (
               <video key={index} src={item.src} controls className="media-preview" />
             ) : (
               <img key={index} src={item.src} alt={item.name} className="media-preview" />

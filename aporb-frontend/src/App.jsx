@@ -12,16 +12,18 @@ import HomePage from './pages/HomePage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import PublishPage from './pages/PublishPage.jsx';
 import ChatsPage from './pages/ChatsPage.jsx';
+import { categories } from './services/storage.js';
 import {
-  STORAGE_KEYS,
-  categories,
-  defaultUsers,
-  defaultPosts,
-  defaultChats,
-  defaultNotifications,
-  readStorage,
-  writeStorage,
-} from './services/storage.js';
+  clearAuthToken,
+  createPost,
+  getCurrentUser,
+  getPosts,
+  getMyPosts,
+  loginUser,
+  registerUser,
+  setAuthToken,
+  updateCurrentUser,
+} from './services/api.js';
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -43,51 +45,49 @@ function App() {
   const [newMessage, setNewMessage] = useState('');
 
   useEffect(() => {
-    const usersFromStorage = readStorage(STORAGE_KEYS.users, defaultUsers);
-    const postsFromStorage = readStorage(STORAGE_KEYS.posts, defaultPosts);
-    const chatsFromStorage = readStorage(STORAGE_KEYS.chats, defaultChats);
-    const notificationsFromStorage = readStorage(STORAGE_KEYS.notifications, defaultNotifications);
+    const loadInitialData = async () => {
+      try {
+        const token = window.localStorage.getItem('aporb_token');
+        if (token) {
+          setAuthToken(token);
+          const currentUserResponse = await getCurrentUser();
+          const user = currentUserResponse.user;
+          if (user) {
+            setCurrentUser(user);
+            setProfileData({
+              name: user.name || '',
+              email: user.email || '',
+              description: user.description || '',
+              interests: user.interests || '',
+              avatar: user.avatar || '',
+            });
+            setPage('home');
+          }
+        }
 
-    setUsers(usersFromStorage);
-    setPosts(postsFromStorage);
-    setChats(chatsFromStorage);
-    setNotifications(notificationsFromStorage);
+        const postsResponse = await getPosts();
+        setPosts(postsResponse.posts || []);
 
-    const session = readStorage(STORAGE_KEYS.session, null);
-    if (session) {
-      const user = usersFromStorage.find((storedUser) => storedUser.id === session.userId);
-      if (user) {
-        setCurrentUser(user);
-        setProfileData(user);
-        setPage('home');
+        const myPostsResponse = await getMyPosts().catch(() => ({ posts: [] }));
+        if (myPostsResponse.posts?.length) {
+          setPosts((prev) => {
+            const merged = [...prev];
+            const existingIds = new Set(merged.map((post) => post.id));
+            myPostsResponse.posts.forEach((post) => {
+              if (!existingIds.has(post.id)) {
+                merged.push(post);
+              }
+            });
+            return merged;
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load initial data', error);
       }
-    }
+    };
+
+    loadInitialData();
   }, []);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.users, users);
-  }, [users]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.posts, posts);
-  }, [posts]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.chats, chats);
-  }, [chats]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.notifications, notifications);
-  }, [notifications]);
-
-  useEffect(() => {
-    if (currentUser) {
-      setProfileData(currentUser);
-      writeStorage(STORAGE_KEYS.session, { userId: currentUser.id });
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.session);
-    }
-  }, [currentUser]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read).length,
@@ -120,63 +120,74 @@ function App() {
     }
   }, [currentUserChats, selectedChatId]);
 
-  const authUser = users.find((user) => user.email === authForm.email.trim().toLowerCase());
-
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setAuthMessage('');
     if (!authForm.email || !authForm.password) {
       setAuthMessage('Completa correo y contraseña.');
       return;
     }
 
-    const user = users.find(
-      (item) => item.email === authForm.email.trim().toLowerCase() && item.password === authForm.password,
-    );
+    try {
+      const response = await loginUser({
+        email: authForm.email.trim().toLowerCase(),
+        password: authForm.password,
+      });
 
-    if (!user) {
-      setAuthMessage('Correo o contraseña incorrectos.');
-      return;
+      const user = response.user;
+      setCurrentUser(user);
+      setUsers((prev) => (prev.some((item) => item.id === user.id) ? prev : [user, ...prev]));
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        description: user.description || '',
+        interests: user.interests || '',
+        avatar: user.avatar || '',
+      });
+      setPage('home');
+      setAuthForm({ email: '', password: '', name: '' });
+      setAuthMessage('');
+    } catch (error) {
+      setAuthMessage(error.message || 'Correo o contraseña incorrectos.');
     }
-
-    setCurrentUser(user);
-    setPage('home');
-    setAuthForm({ email: '', password: '', name: '' });
-    setAuthMessage('');
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setAuthMessage('');
     if (!authForm.name || !authForm.email || !authForm.password) {
       setAuthMessage('Completa todos los campos para registrarte.');
       return;
     }
 
-    if (authUser) {
-      setAuthMessage('Ya existe un usuario con ese correo.');
-      return;
+    try {
+      const response = await registerUser({
+        username: authForm.name.trim(),
+        email: authForm.email.trim().toLowerCase(),
+        password: authForm.password,
+      });
+
+      const user = response.user;
+      setCurrentUser(user);
+      setUsers((prev) => (prev.some((item) => item.id === user.id) ? prev : [user, ...prev]));
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        description: user.description || '',
+        interests: user.interests || '',
+        avatar: user.avatar || '',
+      });
+      setPage('home');
+      setAuthForm({ email: '', password: '', name: '' });
+      setNotifications([
+        { id: `n-${Date.now()}`, text: 'Ya eres parte de AporB. ¡Bienvenido!', read: false },
+        ...notifications,
+      ]);
+    } catch (error) {
+      setAuthMessage(error.message || 'No se pudo completar el registro.');
     }
-
-    const newUser = {
-      id: `u${Date.now()}`,
-      name: authForm.name.trim(),
-      email: authForm.email.trim().toLowerCase(),
-      password: authForm.password,
-      description: 'Escribe algo sobre tus intereses.',
-      interests: 'Trueque, comunidad, ahorro',
-      avatar: '',
-    };
-
-    setUsers([newUser, ...users]);
-    setCurrentUser(newUser);
-    setPage('home');
-    setAuthForm({ email: '', password: '', name: '' });
-    setNotifications([
-      { id: `n-${Date.now()}`, text: 'Ya eres parte de AporB. ¡Bienvenido!', read: false },
-      ...notifications,
-    ]);
   };
 
   const handleLogout = () => {
+    clearAuthToken();
     setCurrentUser(null);
     setPage('landing');
     setSelectedChatId(null);
@@ -203,43 +214,64 @@ function App() {
     setPublishData({ ...publishData, media: mediaItems });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!publishData.title || !publishData.description) return;
 
-    const newPost = {
-      id: `p${Date.now()}`,
-      userId: currentUser.id,
-      title: publishData.title,
-      category: publishData.category,
-      condition: publishData.condition,
-      location: publishData.location,
-      description: publishData.description,
-      details: publishData.details,
-      media: publishData.media || [],
-      created: 'Hace unos minutos',
-    };
+    try {
+      const response = await createPost({
+        title: publishData.title,
+        description: publishData.description,
+        category_id: publishData.category,
+        condition: publishData.condition,
+        location: publishData.location,
+        details: publishData.details,
+        media: (publishData.media || []).map((item) => ({
+          file_url: item.src,
+          file_type: item.type,
+          file_name: item.name,
+        })),
+      });
 
-    setPosts([newPost, ...posts]);
-    setPublishData({ title: '', category: 'libros', condition: 'bueno', location: '', description: '', details: '', media: [] });
-    setPage('home');
-    setNotifications([
-      { id: `n-${Date.now()}`, text: 'Tu publicación fue creada exitosamente.', read: false },
-      ...notifications,
-    ]);
+      const newPost = response.post;
+      setPosts((prev) => [newPost, ...prev]);
+      setPublishData({ title: '', category: 'libros', condition: 'bueno', location: '', description: '', details: '', media: [] });
+      setPage('home');
+      setNotifications([
+        { id: `n-${Date.now()}`, text: 'Tu publicación fue creada exitosamente.', read: false },
+        ...notifications,
+      ]);
+    } catch (error) {
+      setNotifications([
+        { id: `n-${Date.now()}`, text: error.message || 'No se pudo crear la publicación.', read: false },
+        ...notifications,
+      ]);
+    }
   };
 
-  const handleProfileSave = () => {
-    const updatedUsers = users.map((user) =>
-      user.id === currentUser.id ? { ...user, ...profileData, email: user.email, id: user.id } : user,
-    );
-    const updatedCurrent = { ...currentUser, ...profileData };
+  const handleProfileSave = async () => {
+    try {
+      const response = await updateCurrentUser({
+        username: profileData.name,
+        first_name: profileData.name,
+        last_name: '',
+        bio: profileData.description,
+        location: profileData.interests,
+        avatar_url: profileData.avatar,
+      });
 
-    setUsers(updatedUsers);
-    setCurrentUser(updatedCurrent);
-    setNotifications([
-      { id: `n-${Date.now()}`, text: 'Perfil actualizado con éxito.', read: false },
-      ...notifications,
-    ]);
+      const updatedUser = response.user;
+      setUsers((prev) => prev.map((user) => (user.id === currentUser.id ? updatedUser : user)));
+      setCurrentUser(updatedUser);
+      setNotifications([
+        { id: `n-${Date.now()}`, text: 'Perfil actualizado con éxito.', read: false },
+        ...notifications,
+      ]);
+    } catch (error) {
+      setNotifications([
+        { id: `n-${Date.now()}`, text: error.message || 'No se pudo actualizar el perfil.', read: false },
+        ...notifications,
+      ]);
+    }
   };
 
   const handleAvatarChange = (event) => {
