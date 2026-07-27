@@ -378,6 +378,7 @@ function App() {
         page={page}
         logoSecondary={logoSecondary}
         unreadCount={unreadCount}
+        notifications={notifications}
         onNavigate={setPage}
         onUserMenuSelect={handleUserMenuSelect}
         onMarkNotificationsRead={handleMarkNotificationsRead}
@@ -420,7 +421,14 @@ function App() {
 
       {currentUser && (
         <main className="dashboard-page">
-          <Sidebar profileOwner={profileOwner} notifications={notifications} />
+          <Sidebar
+            profileOwner={profileOwner}
+            notifications={notifications}
+            categories={['all', ...categories.map((category) => category.name)]}
+            activeCategory={filterCategory}
+            onFilterChange={setFilterCategory}
+            onOpenPublish={() => setPage('publish')}
+          />
 
           <section className="dashboard-content">
             {page === 'home' && (
