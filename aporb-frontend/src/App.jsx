@@ -1,8 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
-import logoPrimary from './assets/Captura de pantalla 2026-01-26 164435.png';
-import logoSecondary from './assets/Captura de pantalla 2026-01-26 165228.png';
-import logoColor from './assets/Captura de pantalla 2026-07-22 145020.png';
-import heroImage from './assets/d1cdba8f-d250-41c0-a06b-a9f8d2294db8.jpg';
+import logoPrimary from './assets/nombredelapag.png';
+import logoSecondary from './assets/logooriginal.png';
+import heroImage from './assets/image-removebg-preview.png';
 import './App.css';
 import Header from './components/Header.jsx';
 import Sidebar from './components/Sidebar.jsx';

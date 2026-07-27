@@ -18,13 +18,9 @@ function Header({ currentUser, page, logoSecondary, unreadCount, onNavigate, onU
 
   return (
     <header className={`app-header ${theme === 'night' ? 'header-night' : 'header-day'}`}>
-      <div className="brand-block" onClick={() => (currentUser ? onNavigate('home') : onNavigate('landing'))}>
+      <button className="brand-block" type="button" onClick={() => (currentUser ? onNavigate('home') : onNavigate('landing'))} aria-label="AporB">
         <img className="brand-logo" src={logoSecondary} alt="AporB" />
-        <div>
-          <span className="brand-title">AporB</span>
-          <span className="brand-tag">Trueque sin dinero</span>
-        </div>
-      </div>
+      </button>
 
       {currentUser ? (
         <nav className="nav-links">
